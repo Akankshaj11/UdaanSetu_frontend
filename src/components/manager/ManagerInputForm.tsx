@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Slider } from '../ui/slider';
 import { Employee } from '../../lib/mockData';
 import { ArrowLeft, Save } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface ManagerInputFormProps {
   employee: Employee;
@@ -70,7 +70,7 @@ export function ManagerInputForm({ employee, onBack, onSubmit }: ManagerInputFor
                 </div>
                 <Slider
                   value={[formData[key as keyof typeof formData] as number]}
-                  onValueChange={(value) => setFormData({ ...formData, [key]: value[0] })}
+                  onValueChange={(value : number[]) => setFormData({ ...formData, [key]: value[0] })}
                   min={1}
                   max={5}
                   step={1}
@@ -94,7 +94,7 @@ export function ManagerInputForm({ employee, onBack, onSubmit }: ManagerInputFor
               <Label>Potential Rating</Label>
               <Select
                 value={formData.potentialRating}
-                onValueChange={(value) => setFormData({ ...formData, potentialRating: value })}
+                onValueChange={(value : string) => setFormData({ ...formData, potentialRating: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -114,7 +114,7 @@ export function ManagerInputForm({ employee, onBack, onSubmit }: ManagerInputFor
               <Label>Readiness Level</Label>
               <Select
                 value={formData.readinessLevel}
-                onValueChange={(value) => setFormData({ ...formData, readinessLevel: value })}
+                onValueChange={(value : "Ready Now" | "1 Year" | "3 Years") => setFormData({ ...formData, readinessLevel: value })}
               >
                 <SelectTrigger>
                   <SelectValue />

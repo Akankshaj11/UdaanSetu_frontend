@@ -9,7 +9,8 @@ import { RadarChart } from '../shared/RadarChart';
 import { ProgressChart } from '../shared/ProgressChart';
 import { getEmployeeById, getActivitiesByEmployeeId, getSuccessProfileByRole, IDPActivity } from '../../lib/mockData';
 import { CheckCircle2, Circle, Clock, Target, TrendingUp, BookOpen, Users, Briefcase } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+
 
 interface EmployeeDashboardProps {
   employeeId: string;

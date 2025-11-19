@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { RadarChart } from '../shared/RadarChart';
 import { Employee, getActivitiesByEmployeeId, getSuccessProfileByRole } from '../../lib/mockData';
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, Users, TrendingUp, Briefcase } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface IDPApprovalProps {
   employee: Employee;

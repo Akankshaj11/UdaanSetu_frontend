@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface DataUploadProps {
   onBack: () => void;

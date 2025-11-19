@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
+
+
+
+
+
+
+
+
+
+
+
+import React, { useMemo, useState } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 import { mockSuccessProfiles, SuccessProfile } from '../../lib/mockData';
 import { ArrowLeft, Plus, Edit, Trash2, Target } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface SuccessProfileManagementProps {
   onBack: () => void;
@@ -18,29 +35,131 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
   const [showDialog, setShowDialog] = useState(false);
   const [editingProfile, setEditingProfile] = useState<SuccessProfile | null>(null);
 
+  // Use useMemo for constant options
+  const competencyOptions = useMemo(
+    () => [
+      'Strategic Thinking',
+      'Leadership',
+      'Financial Acumen',
+      'Operational Excellence',
+      'Stakeholder Management',
+      'Digital Transformation',
+    ],
+    [],
+  );
+
+  const createEmptyProfile = (): SuccessProfile => ({
+    id: '',
+    roleTitle: '',
+    minimumExperience: 0,
+    // Initialize all competencies to a default level, e.g., 5
+    requiredCompetencies: competencyOptions.reduce<Record<string, number>>((acc, competency) => {
+      acc[competency] = 5;
+      return acc;
+    }, {}),
+    functionalSkills: [],
+    geographicalExperience: [],
+  });
+
+  const [formData, setFormData] = useState<SuccessProfile>(createEmptyProfile());
+
+  const handleDialogClose = (isOpen: boolean) => {
+    setShowDialog(isOpen);
+    if (!isOpen) {
+      setEditingProfile(null);
+      setFormData(createEmptyProfile());
+    }
+  };
+
   const handleCreateNew = () => {
     setEditingProfile(null);
+    setFormData(createEmptyProfile());
     setShowDialog(true);
   };
 
   const handleEdit = (profile: SuccessProfile) => {
     setEditingProfile(profile);
+    setFormData({
+      ...profile,
+      // Ensure we deep copy the competencies object and skills/geo arrays
+      requiredCompetencies: { ...profile.requiredCompetencies },
+      functionalSkills: [...profile.functionalSkills],
+      geographicalExperience: [...profile.geographicalExperience],
+    });
     setShowDialog(true);
   };
 
   const handleDelete = (profileId: string) => {
-    setProfiles(profiles.filter(p => p.id !== profileId));
+    setProfiles((prev) => prev.filter((p) => p.id !== profileId));
     toast.success('Success profile deleted');
   };
 
+  // FIX: Enforce bounds for numeric inputs (specifically for competencies 1-10)
+  const handleNumericInput = (value: string, min = 0, max = Infinity) => {
+    const parsedValue = Number(value);
+    // If not a number, return the minimum valid number (or 0 for experience)
+    if (Number.isNaN(parsedValue)) {
+      return min;
+    }
+    // Clamp the value between min and max
+    return Math.min(Math.max(parsedValue, min), max);
+  };
+
+  const handleListInputChange = (
+    value: string,
+    field: 'functionalSkills' | 'geographicalExperience',
+  ) => {
+    const parsed = value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean); // Filter out empty strings
+    setFormData((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  };
+
   const handleSave = () => {
+    // Basic validation
+    if (!formData.roleTitle.trim()) {
+      toast.error('Role title is required');
+      return;
+    }
+
+    if (formData.minimumExperience <= 0) {
+      toast.error('Minimum experience should be greater than 0');
+      return;
+    }
+
+    // FIX: Competency validation
+    const invalidCompetency = Object.entries(formData.requiredCompetencies).find(
+      ([, level]) => level < 1 || level > 10,
+    );
+
+    if (invalidCompetency) {
+      toast.error(
+        `Competency rating for ${invalidCompetency[0]} must be between 1 and 10.`,
+      );
+      return;
+    }
+
+    const payload: SuccessProfile = {
+      ...formData,
+      // Ensure unique ID for new profiles
+      id: editingProfile ? editingProfile.id : `sp-${Date.now()}`,
+    };
+
     if (editingProfile) {
+      setProfiles((prev) =>
+        prev.map((profile) => (profile.id === editingProfile.id ? payload : profile)),
+      );
       toast.success('Success profile updated');
     } else {
+      setProfiles((prev) => [...prev, payload]);
       toast.success('Success profile created');
     }
-    setShowDialog(false);
-    setEditingProfile(null);
+
+    handleDialogClose(false);
   };
 
   return (
@@ -72,8 +191,9 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
           <div>
             <h4 className="mb-2">What are Success Profiles?</h4>
             <p className="text-sm text-muted-foreground">
-              Success Profiles define the competencies, skills, and experience required for key leadership roles.
-              The AI recommendation engine uses these profiles to identify gaps and suggest personalized development activities.
+              Success Profiles define the competencies, skills, and experience required for key
+              leadership roles. The AI recommendation engine uses these profiles to identify gaps
+              and suggest personalized development activities.
             </p>
           </div>
         </div>
@@ -111,9 +231,15 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
               <h4 className="mb-3">Required Competencies</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {Object.entries(profile.requiredCompetencies).map(([competency, level]) => (
-                  <div key={competency} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div
+                    key={competency}
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                  >
                     <span className="text-sm">{competency}</span>
-                    <Badge className="bg-blue-600">{level}/10</Badge>
+                    <Badge className="bg-blue-600">
+                      {level}
+                      /10
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -147,14 +273,14 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingProfile ? 'Edit Success Profile' : 'Create New Success Profile'}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Basic Info */}
             <div className="space-y-4">
@@ -162,16 +288,31 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
                 <Label>Role Title</Label>
                 <Input
                   placeholder="e.g., General Manager, CFO, Director"
-                  defaultValue={editingProfile?.roleTitle}
+                  value={formData.roleTitle}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      roleTitle: event.target.value,
+                    }))
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Minimum Experience (years)</Label>
                 <Input
                   type="number"
                   placeholder="15"
-                  defaultValue={editingProfile?.minimumExperience}
+                  // Added min attribute for better UX/mobile keyboard
+                  min="0"
+                  value={formData.minimumExperience || ''}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      // Pass min=0, as experience can't be negative, but 0 is acceptable on init.
+                      minimumExperience: handleNumericInput(event.target.value, 0),
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -180,7 +321,8 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
             <div className="space-y-3">
               <Label>Required Competencies (Scale: 1-10)</Label>
               <div className="grid grid-cols-2 gap-4">
-                {['Strategic Thinking', 'Leadership', 'Financial Acumen', 'Operational Excellence', 'Stakeholder Management', 'Digital Transformation'].map((competency) => (
+                {/* Improvement: Use the memoized competencyOptions array */}
+                {competencyOptions.map((competency) => (
                   <div key={competency} className="flex items-center gap-3">
                     <Label className="flex-1 text-sm">{competency}</Label>
                     <Input
@@ -188,7 +330,17 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
                       min="1"
                       max="10"
                       className="w-20"
-                      defaultValue={editingProfile?.requiredCompetencies[competency] || 5}
+                      value={formData.requiredCompetencies[competency] || ''}
+                      onChange={(event) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          requiredCompetencies: {
+                            ...prev.requiredCompetencies,
+                            // Pass min=1, max=10 for competency levels
+                            [competency]: handleNumericInput(event.target.value, 1, 10),
+                          },
+                        }))
+                      }
                     />
                   </div>
                 ))}
@@ -200,7 +352,10 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
               <Label>Functional Skills (comma separated)</Label>
               <Input
                 placeholder="e.g., Operations Management, P&L Management, Team Leadership"
-                defaultValue={editingProfile?.functionalSkills.join(', ')}
+                value={formData.functionalSkills.join(', ')}
+                onChange={(event) =>
+                  handleListInputChange(event.target.value, 'functionalSkills')
+                }
               />
             </div>
 
@@ -209,13 +364,16 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
               <Label>Geographical Experience (comma separated)</Label>
               <Input
                 placeholder="e.g., North, South, West, East"
-                defaultValue={editingProfile?.geographicalExperience.join(', ')}
+                value={formData.geographicalExperience.join(', ')}
+                onChange={(event) =>
+                  handleListInputChange(event.target.value, 'geographicalExperience')
+                }
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+            <Button variant="outline" onClick={() => handleDialogClose(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
