@@ -3,7 +3,7 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import { HRDashboard } from './components/hr/HRDashboard';
-import { ManagerDashboard } from './components/manager/ManagerDashboard';
+// import { ManagerDashboard } from './components/manager/ManagerDashboard';
 import { EmployeeDashboard } from './components/employee/EmployeeDashboard';
 import { User } from './lib/mockData';
 import { LogOut, Menu, X } from 'lucide-react';
@@ -117,7 +117,8 @@ export default function App() {
       {/* Main Content */}
       <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentUser.role === 'hr' && <HRDashboard />}
-        {currentUser.role === 'manager' && <ManagerDashboard managerId={currentUser.id} />}
+        {/* Manager dashboard temporarily disabled */}
+        {/* {currentUser.role === 'manager' && <ManagerDashboard managerId={currentUser.id} />} */}
         {currentUser.role === 'employee' && <EmployeeDashboard employeeId={currentUser.id} />}
       </main>
 

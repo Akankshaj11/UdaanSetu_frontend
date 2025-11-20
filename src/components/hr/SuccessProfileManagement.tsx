@@ -26,6 +26,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
   const [profiles, setProfiles] = useState(mockSuccessProfiles);
   const [showDialog, setShowDialog] = useState(false);
   const [editingProfile, setEditingProfile] = useState<SuccessProfile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Use useMemo for constant options
   const competencyOptions = useMemo(
@@ -111,6 +112,25 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     }));
   };
 
+  const filteredProfiles = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return profiles;
+    }
+
+    return profiles.filter((profile) => {
+      const searchableText = [
+        profile.roleTitle,
+        profile.functionalSkills.join(' '),
+        profile.geographicalExperience.join(' '),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    });
+  }, [profiles, searchQuery]);
+
   const handleSave = () => {
     // Basic validation
     if (!formData.roleTitle.trim()) {
@@ -124,9 +144,9 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     }
 
     // FIX: Competency validation
-    const invalidCompetency = Object.entries(formData.requiredCompetencies).find(
-      ([, level]) => level < 1 || level > 10,
-    );
+    const invalidCompetency = (
+      Object.entries(formData.requiredCompetencies) as [string, number][]
+    ).find(([, level]) => level < 1 || level > 10);
 
     if (invalidCompetency) {
       toast.error(
@@ -191,9 +211,34 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
         </div>
       </Card>
 
-      {/* Success Profiles List */}
-      <div className="grid grid-cols-1 gap-6">
-        {profiles.map((profile) => (
+      {/* Search + Success Profiles List */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="w-full md:max-w-sm">
+            <Label htmlFor="search-profiles" className="text-sm text-muted-foreground">
+              Search by role, skill, or geography
+            </Label>
+            <Input
+              id="search-profiles"
+              placeholder="e.g., CFO, Leadership, APAC"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredProfiles.length} of {profiles.length} profiles
+          </div>
+        </div>
+
+        {filteredProfiles.length === 0 && (
+          <Card className="p-6 text-center text-muted-foreground">
+            No success profiles match your search.
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 gap-6">
+          {filteredProfiles.map((profile) => (
           <Card key={profile.id} className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -222,18 +267,20 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
             <div className="mb-4">
               <h4 className="mb-3">Required Competencies</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Object.entries(profile.requiredCompetencies).map(([competency, level]) => (
-                  <div
-                    key={competency}
-                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                  >
-                    <span className="text-sm">{competency}</span>
-                    <Badge className="bg-blue-600">
-                      {level}
-                      /10
-                    </Badge>
-                  </div>
-                ))}
+                {Object.keys(profile.requiredCompetencies).map((competency) => {
+                  const level = profile.requiredCompetencies[competency];
+                  return (
+                    <div
+                      key={competency}
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                    >
+                      <span className="text-sm">{competency}</span>
+                      <Badge className="bg-blue-600">
+                        {level}/10
+                      </Badge>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -261,7 +308,8 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
               </div>
             </div>
           </Card>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Create/Edit Dialog */}

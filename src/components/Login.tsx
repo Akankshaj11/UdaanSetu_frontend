@@ -170,7 +170,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLogin }) => {
                 >
                   <option value="" disabled>Select your role</option>
                   <option value="hr">HR Admin</option>
-                  <option value="manager">Department Manager</option>
+                  {/* <option value="manager">Department Manager</option> */}
                   <option value="employee">Employee</option>
                 </select>
               </div>
@@ -195,14 +195,14 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLogin }) => {
                 >
                   HR Admin
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin('manager')}
                   className="text-xs"
                 >
                   Manager
-                </Button>
+                </Button> */}
                 <Button
                   variant="outline"
                   size="sm"

@@ -157,7 +157,7 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
                 >
                   <option value="" disabled>Select your role</option>
                   <option value="hr">HR Admin</option>
-                  <option value="manager">Department Manager</option>
+                  {/* <option value="manager">Department Manager</option> */}
                   <option value="employee">Employee</option>
                 </select>
               </div>
