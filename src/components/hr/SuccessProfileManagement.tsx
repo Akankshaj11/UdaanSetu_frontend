@@ -1,6 +1,4 @@
-
-
-
+// src/components/dashboard/SuccessProfileManagement.tsx
 import React, { useMemo, useState } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -15,15 +13,21 @@ import {
   DialogFooter,
 } from '../ui/dialog';
 import { mockSuccessProfiles, SuccessProfile } from '../../lib/mockData';
-import { ArrowLeft, Plus, Edit, Trash2, Target } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Target, X } from 'lucide-react';
 import { toast } from 'sonner';
+
+/**
+ * Use the uploaded file path from conversation history.
+ * The platform build will transform this local path into an accessible URL.
+ */
+const LOGO_PATH = '/mnt/data/669bd3f1-9bf0-43c9-b187-87433b4e58b0.png';
 
 interface SuccessProfileManagementProps {
   onBack: () => void;
 }
 
 export function SuccessProfileManagement({ onBack }: SuccessProfileManagementProps) {
-  const [profiles, setProfiles] = useState(mockSuccessProfiles);
+  const [profiles, setProfiles] = useState<SuccessProfile[]>(mockSuccessProfiles);
   const [showDialog, setShowDialog] = useState(false);
   const [editingProfile, setEditingProfile] = useState<SuccessProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,7 +49,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     id: '',
     roleTitle: '',
     minimumExperience: 0,
-    // Initialize all competencies to a default level, e.g., 5
+    // Initialize competencies to a default level (5)
     requiredCompetencies: competencyOptions.reduce<Record<string, number>>((acc, competency) => {
       acc[competency] = 5;
       return acc;
@@ -74,10 +78,9 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     setEditingProfile(profile);
     setFormData({
       ...profile,
-      // Ensure we deep copy the competencies object and skills/geo arrays
-      requiredCompetencies: { ...profile.requiredCompetencies },
-      functionalSkills: [...profile.functionalSkills],
-      geographicalExperience: [...profile.geographicalExperience],
+      requiredCompetencies: { ...(profile.requiredCompetencies || {}) },
+      functionalSkills: [...(profile.functionalSkills || [])],
+      geographicalExperience: [...(profile.geographicalExperience || [])],
     });
     setShowDialog(true);
   };
@@ -87,14 +90,12 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     toast.success('Success profile deleted');
   };
 
-  // FIX: Enforce bounds for numeric inputs (specifically for competencies 1-10)
+  // clamp numeric input values and normalize
   const handleNumericInput = (value: string, min = 0, max = Infinity) => {
     const parsedValue = Number(value);
-    // If not a number, return the minimum valid number (or 0 for experience)
     if (Number.isNaN(parsedValue)) {
       return min;
     }
-    // Clamp the value between min and max
     return Math.min(Math.max(parsedValue, min), max);
   };
 
@@ -105,7 +106,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     const parsed = value
       .split(',')
       .map((item) => item.trim())
-      .filter(Boolean); // Filter out empty strings
+      .filter(Boolean);
     setFormData((prev) => ({
       ...prev,
       [field]: parsed,
@@ -113,11 +114,8 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
   };
 
   const filteredProfiles = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return profiles;
-    }
-
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return profiles;
     return profiles.filter((profile) => {
       const searchableText = [
         profile.roleTitle,
@@ -126,8 +124,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       ]
         .join(' ')
         .toLowerCase();
-
-      return searchableText.includes(query);
+      return searchableText.includes(q);
     });
   }, [profiles, searchQuery]);
 
@@ -137,285 +134,251 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       toast.error('Role title is required');
       return;
     }
-
     if (formData.minimumExperience <= 0) {
       toast.error('Minimum experience should be greater than 0');
       return;
     }
 
-    // FIX: Competency validation
-    const invalidCompetency = (
-      Object.entries(formData.requiredCompetencies) as [string, number][]
-    ).find(([, level]) => level < 1 || level > 10);
-
+    // Competency validation (1 - 10)
+    const invalidCompetency = (Object.entries(formData.requiredCompetencies) as [string, number][])
+      .find(([, level]) => level < 1 || level > 10);
     if (invalidCompetency) {
-      toast.error(
-        `Competency rating for ${invalidCompetency[0]} must be between 1 and 10.`,
-      );
+      toast.error(`Competency rating for ${invalidCompetency[0]} must be between 1 and 10.`);
       return;
     }
 
     const payload: SuccessProfile = {
       ...formData,
-      // Ensure unique ID for new profiles
       id: editingProfile ? editingProfile.id : `sp-${Date.now()}`,
     };
 
     if (editingProfile) {
-      setProfiles((prev) =>
-        prev.map((profile) => (profile.id === editingProfile.id ? payload : profile)),
-      );
+      setProfiles((prev) => prev.map((p) => (p.id === editingProfile.id ? payload : p)));
       toast.success('Success profile updated');
     } else {
-      setProfiles((prev) => [...prev, payload]);
+      setProfiles((prev) => [payload, ...prev]);
       toast.success('Success profile created');
     }
 
     handleDialogClose(false);
   };
 
+  // Responsive grid columns: 1 on small, 2 on md, 3 on lg
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <button onClick={onBack} aria-label="Back" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4" />
             Back
-          </Button>
-          <div>
-            <h1>Success Profile Management</h1>
-            <p className="text-muted-foreground mt-1">
-              Define competency benchmarks for key leadership roles
-            </p>
+          </button>
+
+          <div className="flex items-center gap-3">
+            <img src={LOGO_PATH} alt="logo" className="h-10 w-10 rounded-md object-contain" />
+            <div>
+              <h1 className="text-lg font-semibold">Success Profile Management</h1>
+              <p className="text-sm text-muted-foreground">Define competency benchmarks for key leadership roles</p>
+            </div>
           </div>
         </div>
-        <Button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Profile
-        </Button>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Create New Profile
+          </Button>
+        </div>
       </div>
 
-      {/* Info Card */}
-      <Card className="p-6 bg-blue-600/10 border-blue-600/30">
+      {/* Info card */}
+      <Card className="p-4 bg-blue-600/6 border-blue-600/30">
         <div className="flex items-start gap-3">
-          <Target className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <Target className="w-5 h-5 text-blue-500 mt-0.5" />
           <div>
-            <h4 className="mb-2">What are Success Profiles?</h4>
+            <h4 className="mb-1 font-medium">What are Success Profiles?</h4>
             <p className="text-sm text-muted-foreground">
-              Success Profiles define the competencies, skills, and experience required for key
-              leadership roles. The AI recommendation engine uses these profiles to identify gaps
-              and suggest personalized development activities.
+              Success Profiles define the competencies, skills, and experience required for key leadership roles.
+              The AI recommendation engine uses these profiles to identify gaps and suggest development actions.
             </p>
           </div>
         </div>
       </Card>
 
-      {/* Search + Success Profiles List */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="w-full md:max-w-sm">
-            <Label htmlFor="search-profiles" className="text-sm text-muted-foreground">
-              Search by role, skill, or geography
-            </Label>
+      {/* Search & stats */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex-1 md:max-w-md">
+          <Label htmlFor="search-profiles" className="text-sm text-muted-foreground">Search by role, skill or geography</Label>
+          <div className="relative mt-2">
             <Input
               id="search-profiles"
-              placeholder="e.g., CFO, Leadership, APAC"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="mt-1"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="e.g., CFO, Leadership, APAC"
+              className="pr-10"
+              aria-label="Search success profiles"
             />
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredProfiles.length} of {profiles.length} profiles
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-800"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
           </div>
         </div>
 
-        {filteredProfiles.length === 0 && (
-          <Card className="p-6 text-center text-muted-foreground">
-            No success profiles match your search.
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 gap-6">
-          {filteredProfiles.map((profile) => (
-          <Card key={profile.id} className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="mb-1">{profile.roleTitle}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Minimum Experience: {profile.minimumExperience} years
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(profile)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(profile.id)}
-                  className="text-red-500 hover:text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Required Competencies */}
-            <div className="mb-4">
-              <h4 className="mb-3">Required Competencies</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Object.keys(profile.requiredCompetencies).map((competency) => {
-                  const level = profile.requiredCompetencies[competency];
-                  return (
-                    <div
-                      key={competency}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                    >
-                      <span className="text-sm">{competency}</span>
-                      <Badge className="bg-blue-600">
-                        {level}/10
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Functional Skills */}
-            <div className="mb-4">
-              <h4 className="mb-3">Functional Skills</h4>
-              <div className="flex flex-wrap gap-2">
-                {profile.functionalSkills.map((skill) => (
-                  <Badge key={skill} variant="outline">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Geographical Experience */}
-            <div>
-              <h4 className="mb-3">Geographical Experience</h4>
-              <div className="flex flex-wrap gap-2">
-                {profile.geographicalExperience.map((geo) => (
-                  <Badge key={geo} className="bg-green-600">
-                    {geo}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </Card>
-          ))}
+        <div className="text-sm text-muted-foreground">
+          Showing <span className="font-medium text-foreground">{filteredProfiles.length}</span> of <span className="font-medium text-foreground">{profiles.length}</span> profiles
         </div>
       </div>
 
-      {/* Create/Edit Dialog */}
+      {/* Profiles grid */}
+      {filteredProfiles.length === 0 ? (
+        <Card className="p-6 text-center text-muted-foreground">No success profiles match your search.</Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProfiles.map((profile) => (
+            <Card key={profile.id} className="p-4 hover:shadow-md transition">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-md font-semibold">{profile.roleTitle}</h3>
+                  <p className="text-sm text-muted-foreground">Minimum Experience: <span className="font-medium">{profile.minimumExperience} yrs</span></p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(profile)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(profile.id)} className="text-red-500 hover:text-red-600">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Competencies */}
+              <div className="mb-3">
+                <h4 className="text-sm mb-2">Required Competencies</h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(profile.requiredCompetencies).map(([name, level]) => (
+                    <div key={name} className="flex items-center justify-between bg-muted rounded p-2">
+                      <div className="text-sm truncate">{name}</div>
+                      <Badge className="bg-blue-600 text-xs">{level}/10</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Skills & Geography */}
+              <div className="flex gap-2 flex-wrap mb-2">
+                {profile.functionalSkills.map((skill) => (
+                  <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
+                ))}
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {profile.geographicalExperience.map((geo) => (
+                  <Badge key={geo} className="bg-green-600 text-xs">{geo}</Badge>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Dialog (create/edit) */}
       <Dialog open={showDialog} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingProfile ? 'Edit Success Profile' : 'Create New Success Profile'}
-            </DialogTitle>
+            <DialogTitle>{editingProfile ? 'Edit Success Profile' : 'Create New Success Profile'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Basic Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+            {/* Left column: Basic info + lists */}
             <div className="space-y-4">
-              <div className="space-y-2">
+              <div>
                 <Label>Role Title</Label>
                 <Input
-                  placeholder="e.g., General Manager, CFO, Director"
+                  placeholder="e.g., General Manager, CFO"
                   value={formData.roleTitle}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      roleTitle: event.target.value,
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, roleTitle: e.target.value }))}
                 />
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label>Minimum Experience (years)</Label>
                 <Input
                   type="number"
-                  placeholder="15"
-                  // Added min attribute for better UX/mobile keyboard
-                  min="0"
+                  min={0}
                   value={formData.minimumExperience || ''}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      // Pass min=0, as experience can't be negative, but 0 is acceptable on init.
-                      minimumExperience: handleNumericInput(event.target.value, 0),
-                    }))
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, minimumExperience: handleNumericInput(e.target.value, 0) }))
                   }
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to filter candidate readiness and shortlist matches.</p>
+              </div>
+
+              <div>
+                <Label>Functional Skills (comma separated)</Label>
+                <Input
+                  value={formData.functionalSkills.join(', ')}
+                  onChange={(e) => handleListInputChange(e.target.value, 'functionalSkills')}
+                  placeholder="e.g., Operations, P&L, Team Leadership"
+                />
+              </div>
+
+              <div>
+                <Label>Geographical Experience (comma separated)</Label>
+                <Input
+                  value={formData.geographicalExperience.join(', ')}
+                  onChange={(e) => handleListInputChange(e.target.value, 'geographicalExperience')}
+                  placeholder="e.g., APAC, EMEA, India"
                 />
               </div>
             </div>
 
-            {/* Required Competencies */}
-            <div className="space-y-3">
-              <Label>Required Competencies (Scale: 1-10)</Label>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Improvement: Use the memoized competencyOptions array */}
+            {/* Right column: Competencies grid */}
+            <div>
+              <Label>Required Competencies (1 - 10)</Label>
+              <div className="grid grid-cols-1 gap-3 mt-2">
                 {competencyOptions.map((competency) => (
                   <div key={competency} className="flex items-center gap-3">
-                    <Label className="flex-1 text-sm">{competency}</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="10"
-                      className="w-20"
-                      value={formData.requiredCompetencies[competency] || ''}
-                      onChange={(event) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          requiredCompetencies: {
-                            ...prev.requiredCompetencies,
-                            // Pass min=1, max=10 for competency levels
-                            [competency]: handleNumericInput(event.target.value, 1, 10),
-                          },
-                        }))
-                      }
-                    />
+                    <div className="flex-1">
+                      <div className="text-sm">{competency}</div>
+                    </div>
+
+                    <div className="w-28">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={formData.requiredCompetencies[competency] ?? ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            requiredCompetencies: {
+                              ...prev.requiredCompetencies,
+                              [competency]: handleNumericInput(e.target.value, 1, 10),
+                            },
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Functional Skills */}
-            <div className="space-y-2">
-              <Label>Functional Skills (comma separated)</Label>
-              <Input
-                placeholder="e.g., Operations Management, P&L Management, Team Leadership"
-                value={formData.functionalSkills.join(', ')}
-                onChange={(event) =>
-                  handleListInputChange(event.target.value, 'functionalSkills')
-                }
-              />
-            </div>
-
-            {/* Geographical Experience */}
-            <div className="space-y-2">
-              <Label>Geographical Experience (comma separated)</Label>
-              <Input
-                placeholder="e.g., North, South, West, East"
-                value={formData.geographicalExperience.join(', ')}
-                onChange={(event) =>
-                  handleListInputChange(event.target.value, 'geographicalExperience')
-                }
-              />
+              <p className="text-xs text-muted-foreground mt-3">
+                Competency ratings help the recommendation engine score candidates against role benchmarks.
+              </p>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => handleDialogClose(false)}>
-              Cancel
-            </Button>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => handleDialogClose(false)}>Cancel</Button>
             <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
               {editingProfile ? 'Update Profile' : 'Create Profile'}
             </Button>
@@ -425,3 +388,5 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     </div>
   );
 }
+
+export default SuccessProfileManagement;
