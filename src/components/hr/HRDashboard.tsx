@@ -20,6 +20,8 @@ import {
 import { DataUpload } from './DataUpload';
 import { SuccessProfileManagement } from './SuccessProfileManagement';
 import { EmployeeDetailView } from './EmployeeDetailView';
+import logo from "../../images/logo1.png"; 
+
 
 /**
  * Use the uploaded file path from the conversation history as the page logo.
@@ -163,16 +165,12 @@ export function HRDashboard() {
     <div className="space-y-6 max-w-7xl mx-auto p-4">
       {/* header */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <img src={LOGO_PATH} alt="UdaanSetu" className="h-10 w-auto rounded-md object-contain" />
-          <div>
+
+            <div>
             <h1 className="text-2xl font-bold">HR Committee</h1>
             <p className="text-sm text-muted-foreground">Succession planning & IDP management</p>
           </div>
         </div>
-
-        {/* Removed the right-side buttons (Upload Data, Success Profiles, HR Admin) as requested */}
-      </div>
 
       {/* tabs */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
