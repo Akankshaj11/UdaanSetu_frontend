@@ -94,7 +94,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLogin }) => {
         </div>
 
         {/* Form */}
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <Label htmlFor="userID" className="text-gray-300 mb-3 block">
               UserID
@@ -128,6 +128,31 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLogin }) => {
               required
             />
           </div>
+
+          <div>
+            <p className="text-gray-300 mb-2">Role</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {["HR Admin", "Employee"].map((role) => {
+                const isSelected = selectedUserType === role;
+
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedUserType(role)}
+                    className={`border px-3 py-2 rounded-md transition-colors cursor-pointer ${
+                      isSelected
+                        ? "bg-blue-500 text-white border-blue-500"
+                        : "text-blue-400 border-gray-500"
+                    }`}
+                  >
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
 
           {/* Sign In button */}
           <Button
