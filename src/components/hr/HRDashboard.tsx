@@ -10,6 +10,32 @@ import {
 } from 'lucide-react';
 import { DataUpload } from './DataUpload';
 import { SuccessProfileManagement } from './SuccessProfileManagement';
+import { EmployeeDetailView } from './EmployeeDetailView';
+import logo from "../../images/logo1.png"; 
+
+
+/**
+ * Use the uploaded file path from the conversation history as the page logo.
+ * The platform will transform this local path into a URL during rendering.
+ */
+const LOGO_PATH = '/mnt/data/669bd3f1-9bf0-43c9-b187-87433b4e58b0.png';
+
+/* =========================
+   Compact EmployeeIdForm (inline)
+   ========================= */
+function EmployeeIdForm({ onSubmit }: { onSubmit?: (payload: any) => void }) {
+  const [empId, setEmpId] = useState('');
+  const [password, setPassword] = useState('');
+  const [currentRole, setCurrentRole] = useState('');
+  const [department, setDepartment] = useState('');
+  const [status, setStatus] = useState<'Active' | 'Inactive' | 'Pending'>('Active');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setEmpId(''); setPassword(''); setCurrentRole(''); setDepartment(''); setStatus('Active'); setError(null); setSuccess(null);
+  };
 
 type View = 'overview' | 'data-upload' | 'success-profiles' | 'idp-requests' | 'employee-detail';
 type Tab = 'profile' | 'gaps' | 'idp';
