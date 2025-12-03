@@ -1,5 +1,4 @@
-// src/components/dashboard/SuccessProfileManagement.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -12,14 +11,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { mockSuccessProfiles, SuccessProfile } from '../../lib/mockData';
-import { ArrowLeft, Plus, Edit, Trash2, Target, X } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
-/**
- * Use the uploaded file path from conversation history.
- * The platform build will transform this local path into an accessible URL.
- */
 const LOGO_PATH = '/mnt/data/669bd3f1-9bf0-43c9-b187-87433b4e58b0.png';
 
 interface SuccessProfileManagementProps {
@@ -31,8 +27,8 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
   const [showDialog, setShowDialog] = useState(false);
   const [editingProfile, setEditingProfile] = useState<SuccessProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterRole, setFilterRole] = useState('');
 
-  // Use useMemo for constant options
   const competencyOptions = useMemo(
     () => [
       'Strategic Thinking',
@@ -42,21 +38,20 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       'Stakeholder Management',
       'Digital Transformation',
     ],
-    [],
+    []
   );
 
-  const createEmptyProfile = (): SuccessProfile => ({
+  const createEmptyProfile = useCallback((): SuccessProfile => ({
     id: '',
     roleTitle: '',
     minimumExperience: 0,
-    // Initialize competencies to a default level (5)
     requiredCompetencies: competencyOptions.reduce<Record<string, number>>((acc, competency) => {
       acc[competency] = 5;
       return acc;
     }, {}),
     functionalSkills: [],
     geographicalExperience: [],
-  });
+  }), [competencyOptions]);
 
   const [formData, setFormData] = useState<SuccessProfile>(createEmptyProfile());
 
@@ -78,9 +73,9 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     setEditingProfile(profile);
     setFormData({
       ...profile,
-      requiredCompetencies: { ...(profile.requiredCompetencies || {}) },
-      functionalSkills: [...(profile.functionalSkills || [])],
-      geographicalExperience: [...(profile.geographicalExperience || [])],
+      requiredCompetencies: { ...profile.requiredCompetencies },
+      functionalSkills: [...profile.functionalSkills],
+      geographicalExperience: [...profile.geographicalExperience],
     });
     setShowDialog(true);
   };
@@ -90,8 +85,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     toast.success('Success profile deleted');
   };
 
-  // clamp numeric input values and normalize
-  const handleNumericInput = (value: string, min = 0, max = Infinity) => {
+  const handleNumericInput = (value: string, min = 0, max = Infinity): number => {
     const parsedValue = Number(value);
     if (Number.isNaN(parsedValue)) {
       return min;
@@ -101,7 +95,7 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
 
   const handleListInputChange = (
     value: string,
-    field: 'functionalSkills' | 'geographicalExperience',
+    field: 'functionalSkills' | 'geographicalExperience'
   ) => {
     const parsed = value
       .split(',')
@@ -114,8 +108,11 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
   };
 
   const filteredProfiles = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return profiles;
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return profiles;
+    }
+
     return profiles.filter((profile) => {
       const searchableText = [
         profile.roleTitle,
@@ -124,12 +121,12 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       ]
         .join(' ')
         .toLowerCase();
-      return searchableText.includes(q);
+
+      return searchableText.includes(query);
     });
   }, [profiles, searchQuery]);
 
   const handleSave = () => {
-    // Basic validation
     if (!formData.roleTitle.trim()) {
       toast.error('Role title is required');
       return;
@@ -139,9 +136,10 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
       return;
     }
 
-    // Competency validation (1 - 10)
-    const invalidCompetency = (Object.entries(formData.requiredCompetencies) as [string, number][])
-      .find(([, level]) => level < 1 || level > 10);
+    const invalidCompetency = (
+      Object.entries(formData.requiredCompetencies) as [string, number][]
+    ).find(([, level]) => level < 1 || level > 10);
+
     if (invalidCompetency) {
       toast.error(`Competency rating for ${invalidCompetency[0]} must be between 1 and 10.`);
       return;
@@ -163,223 +161,267 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     handleDialogClose(false);
   };
 
-  // Responsive grid columns: 1 on small, 2 on md, 3 on lg
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-background px-4 sm:px-6 lg:px-12 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} aria-label="Back" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back
-          </button>
-
-          <div className="flex items-center gap-3">
-            <img src={LOGO_PATH} alt="logo" className="h-10 w-10 rounded-md object-contain" />
-            <div>
-              <h1 className="text-lg font-semibold">Success Profile Management</h1>
-              <p className="text-sm text-muted-foreground">Define competency benchmarks for key leadership roles</p>
-            </div>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Success Profile Management</h1>
+            <p className="text-muted-foreground mt-1">
+              Define competency benchmarks for key leadership roles
+            </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Profile
-          </Button>
-        </div>
+        <Button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-4 h-4 mr-2" />
+          Create New Profile
+        </Button>
       </div>
 
-      {/* Info card */}
-      <Card className="p-4 bg-blue-600/6 border-blue-600/30">
+      {/* Info Card */}
+      <Card className="p-6 bg-blue-600/10 border-blue-600/30 mb-8">
         <div className="flex items-start gap-3">
-          <Target className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Target className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="mb-1 font-medium">What are Success Profiles?</h4>
+            <h4 className="mb-2 font-medium">What are Success Profiles?</h4>
             <p className="text-sm text-muted-foreground">
-              Success Profiles define the competencies, skills, and experience required for key leadership roles.
-              The AI recommendation engine uses these profiles to identify gaps and suggest development actions.
+              Success Profiles define the competencies, skills, and experience required for key
+              leadership roles. The AI recommendation engine uses these profiles to identify gaps
+              and suggest personalized development activities.
             </p>
           </div>
         </div>
       </Card>
 
-      {/* Search & stats */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex-1 md:max-w-md">
-          <Label htmlFor="search-profiles" className="text-sm text-muted-foreground">Search by role, skill or geography</Label>
-          <div className="relative mt-2">
+      {/* Search + Success Profiles List */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="w-full md:max-w-sm">
+            <Label htmlFor="search-profiles" className="text-sm text-muted-foreground">
+              Search by role, skill, or geography
+            </Label>
             <Input
               id="search-profiles"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="e.g., CFO, Leadership, APAC"
-              className="pr-10"
-              aria-label="Search success profiles"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="mt-1"
             />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-800"
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredProfiles.length} of {profiles.length} profiles
           </div>
         </div>
 
-        <div className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{filteredProfiles.length}</span> of <span className="font-medium text-foreground">{profiles.length}</span> profiles
-        </div>
-      </div>
+        {filteredProfiles.length === 0 && (
+          <Card className="p-6 text-center text-muted-foreground">
+            No success profiles match your search.
+          </Card>
+        )}
 
-      {/* Profiles grid */}
-      {filteredProfiles.length === 0 ? (
-        <Card className="p-6 text-center text-muted-foreground">No success profiles match your search.</Card>
-      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProfiles.map((profile) => (
-            <Card key={profile.id} className="p-4 hover:shadow-md transition">
-              <div className="flex items-start justify-between gap-3 mb-4">
+            <Card key={profile.id} className="p-6">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-md font-semibold">{profile.roleTitle}</h3>
-                  <p className="text-sm text-muted-foreground">Minimum Experience: <span className="font-medium">{profile.minimumExperience} yrs</span></p>
+                  <h3 className="text-lg font-semibold">{profile.roleTitle}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Minimum Experience: {profile.minimumExperience} years
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(profile)}>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEdit(profile)}
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(profile.id)} className="text-red-500 hover:text-red-600">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(profile.id)}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
-              {/* Competencies */}
-              <div className="mb-3">
-                <h4 className="text-sm mb-2">Required Competencies</h4>
+              {/* Required Competencies */}
+              <div className="mb-6">
+                <h4 className="mb-3 font-medium text-sm uppercase tracking-wider text-muted-foreground">
+                  Required Competencies
+                </h4>
                 <div className="grid grid-cols-1 gap-2">
-                  {Object.entries(profile.requiredCompetencies).map(([name, level]) => (
-                    <div key={name} className="flex items-center justify-between bg-muted rounded p-2">
-                      <div className="text-sm truncate">{name}</div>
-                      <Badge className="bg-blue-600 text-xs">{level}/10</Badge>
+                  {Object.entries(profile.requiredCompetencies).map(([competency, level]) => (
+                    <div
+                      key={competency}
+                      className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg border"
+                    >
+                      <span className="text-sm font-medium text-foreground">{competency}</span>
+                      <Badge className="bg-blue-600 text-white px-2 py-1">
+                        {level}/10
+                      </Badge>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Skills & Geography */}
-              <div className="flex gap-2 flex-wrap mb-2">
-                {profile.functionalSkills.map((skill) => (
-                  <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
-                ))}
-              </div>
+              {/* Functional Skills */}
+              {profile.functionalSkills.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="mb-3 font-medium text-sm uppercase tracking-wider text-muted-foreground">
+                    Functional Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.functionalSkills.map((skill) => (
+                      <Badge key={skill} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <div className="flex gap-2 flex-wrap">
-                {profile.geographicalExperience.map((geo) => (
-                  <Badge key={geo} className="bg-green-600 text-xs">{geo}</Badge>
-                ))}
-              </div>
+              {/* Geographical Experience */}
+              {profile.geographicalExperience.length > 0 && (
+                <div>
+                  <h4 className="mb-3 font-medium text-sm uppercase tracking-wider text-muted-foreground">
+                    Geographical Experience
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.geographicalExperience.map((geo) => (
+                      <Badge key={geo} className="bg-green-600 text-white text-xs px-2 py-1">
+                        {geo}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card>
           ))}
         </div>
-      )}
+      </div>
 
       {/* Dialog (create/edit) */}
       <Dialog open={showDialog} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>{editingProfile ? 'Edit Success Profile' : 'Create New Success Profile'}</DialogTitle>
+            <DialogTitle className="text-2xl">
+              {editingProfile ? 'Edit Success Profile' : 'Create New Success Profile'}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-            {/* Left column: Basic info + lists */}
-            <div className="space-y-4">
-              <div>
-                <Label>Role Title</Label>
+          <div className="space-y-6 py-4">
+            {/* Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Role Title *</Label>
                 <Input
-                  placeholder="e.g., General Manager, CFO"
+                  placeholder="e.g., General Manager, CFO, Director"
                   value={formData.roleTitle}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, roleTitle: e.target.value }))}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      roleTitle: event.target.value,
+                    }))
+                  }
+                  className="h-11"
                 />
               </div>
 
-              <div>
-                <Label>Minimum Experience (years)</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Minimum Experience (years) *</Label>
                 <Input
                   type="number"
-                  min={0}
+                  placeholder="15"
+                  min="1"
                   value={formData.minimumExperience || ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, minimumExperience: handleNumericInput(e.target.value, 0) }))
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      minimumExperience: handleNumericInput(event.target.value, 1),
+                    }))
                   }
-                />
-                <p className="text-xs text-muted-foreground mt-1">Used to filter candidate readiness and shortlist matches.</p>
-              </div>
-
-              <div>
-                <Label>Functional Skills (comma separated)</Label>
-                <Input
-                  value={formData.functionalSkills.join(', ')}
-                  onChange={(e) => handleListInputChange(e.target.value, 'functionalSkills')}
-                  placeholder="e.g., Operations, P&L, Team Leadership"
-                />
-              </div>
-
-              <div>
-                <Label>Geographical Experience (comma separated)</Label>
-                <Input
-                  value={formData.geographicalExperience.join(', ')}
-                  onChange={(e) => handleListInputChange(e.target.value, 'geographicalExperience')}
-                  placeholder="e.g., APAC, EMEA, India"
+                  className="h-11"
                 />
               </div>
             </div>
 
-            {/* Right column: Competencies grid */}
-            <div>
-              <Label>Required Competencies (1 - 10)</Label>
-              <div className="grid grid-cols-1 gap-3 mt-2">
+            {/* Required Competencies */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium block mb-3">
+                Required Competencies (Scale: 1-10) *
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {competencyOptions.map((competency) => (
-                  <div key={competency} className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <div className="text-sm">{competency}</div>
-                    </div>
-
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={formData.requiredCompetencies[competency] ?? ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            requiredCompetencies: {
-                              ...prev.requiredCompetencies,
-                              [competency]: handleNumericInput(e.target.value, 1, 10),
-                            },
-                          }))
-                        }
-                      />
-                    </div>
+                  <div key={competency} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
+                    <Label className="flex-1 text-sm font-medium m-0">{competency}</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      className="w-20 h-11"
+                      value={formData.requiredCompetencies[competency]?.toString() || ''}
+                      onChange={(event) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          requiredCompetencies: {
+                            ...prev.requiredCompetencies,
+                            [competency]: handleNumericInput(event.target.value, 1, 10),
+                          },
+                        }))
+                      }
+                    />
                   </div>
                 ))}
               </div>
+            </div>
 
-              <p className="text-xs text-muted-foreground mt-3">
-                Competency ratings help the recommendation engine score candidates against role benchmarks.
-              </p>
+            {/* Functional Skills */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Functional Skills (comma separated)</Label>
+              <Input
+                placeholder="e.g., Operations Management, P&L Management, Team Leadership"
+                value={formData.functionalSkills.join(', ')}
+                onChange={(event) => handleListInputChange(event.target.value, 'functionalSkills')}
+                className="h-11"
+              />
+            </div>
+
+            {/* Geographical Experience */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Geographical Experience (comma separated)</Label>
+              <Input
+                placeholder="e.g., North America, APAC, Europe"
+                value={formData.geographicalExperience.join(', ')}
+                onChange={(event) =>
+                  handleListInputChange(event.target.value, 'geographicalExperience')
+                }
+                className="h-11"
+              />
             </div>
           </div>
 
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => handleDialogClose(false)}>Cancel</Button>
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleDialogClose(false)}
+              className="h-11 px-8"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              className="bg-blue-600 hover:bg-blue-700 h-11 px-8"
+            >
               {editingProfile ? 'Update Profile' : 'Create Profile'}
             </Button>
           </DialogFooter>
@@ -388,5 +430,3 @@ export function SuccessProfileManagement({ onBack }: SuccessProfileManagementPro
     </div>
   );
 }
-
-export default SuccessProfileManagement;
